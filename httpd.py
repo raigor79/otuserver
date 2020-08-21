@@ -3,6 +3,7 @@ import asyncio
 import socket
 import logging
 from optparse import OptionParser
+from dataclasses import dataclass 
 
 op = OptionParser('OTUServer')
 op.add_option('-w', '--workers', default=2, help='Number of workers')
@@ -23,8 +24,23 @@ ERRORS = {
     METHOD_NOT_ALLOWED: "Method not allowed"
 }
 
-def pars(req):
-    retern 
+
+@dataclass
+class Request():
+    str_request:str
+        
+    def __post_init__(self):
+        self.request = self.str_request.split('\r\n')
+        self.method = self.request[0][:3]
+        self.ver_protocol = self.request[0][-8:]
+        self.req_resurs = self.request[0][4:-8]
+
+    def pars(self):
+        pass
+
+
+def pars_reqest(data):
+    pass
 
 
 async def handle_client(client, loop, name):
@@ -33,8 +49,9 @@ async def handle_client(client, loop, name):
         request = (await loop.sock_recv(client, 1024)).decode('utf8')
         if len(request) == 0:
             break
-        data = request.split('\r\n')
-        print(data, '\n', name)
+        data = Request(request)
+        
+        print(data.method, data.ver_protocol, data.req_resurs, '\n', name)
         response = request
         await loop.sock_sendall(client, response.encode('utf8'))
     client.close()
@@ -68,6 +85,8 @@ if __name__ == "__main__":
     log = logging.getLogger()
     try:
         asyncio.run(main(opt))
+    except Exception:
+        pass
     except KeyboardInterrupt:
         pass
         
