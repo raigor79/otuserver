@@ -2,8 +2,10 @@ import os
 import asyncio
 import socket
 import logging
+from datetime import datetime
 from optparse import OptionParser
 from dataclasses import dataclass 
+
 
 op = OptionParser('OTUServer')
 op.add_option('-w', '--workers', default=2, help='Number of workers')
@@ -13,11 +15,11 @@ op.add_option('-p', '--port', default=8080, help='Server port')
 op.add_option('-b', '--backlog', default=8, help='Server backlog')
 opt, arg = op.parse_args()
 
+
 OK = 200
 FORBIDDEN = 403
 NOT_FOUND = 404
 METHOD_NOT_ALLOWED = 405
-
 ERRORS = {
     FORBIDDEN: "Forbidden",
     NOT_FOUND: "Not Found",
@@ -28,18 +30,31 @@ ERRORS = {
 @dataclass
 class Request():
     str_request:str
+    error_method: bool = False
         
     def __post_init__(self):
         self.request = self.str_request.split('\r\n')
         self.method = self.request[0][:3]
         self.ver_protocol = self.request[0][-8:]
         self.req_resurs = self.request[0][4:-8]
+        self.valid_method()
 
-    def pars(self):
-        pass
+    def valid_method(self):
+        if self.method in ('GET', 'HEAD'):
+            self.error_method = True
+
+        
+# @dataclass
+# class Response():
+#     headers: dict = {'Server' : 'otuserver', 'Date' : '', 'Content-Language' : 'ru' }
+
+#     def __post_init__(self):
+#         #self.headers['Date'] = datetime.today().strftime("%a, %d %b %Y %I:%m:%S GTM")
+#         pass
 
 
 def pars_reqest(data):
+    
     pass
 
 
