@@ -34,7 +34,8 @@ CONTENT_TYPE = {
     ".jpeg": "image/jpeg",
     ".png" : "mage/png",
     ".gif" : "image/gif",
-    ".swf" : "application/x-shockwave-flash"
+    ".swf" : "application/x-shockwave-flash",
+    ".txt" : "text/html"
 }
 
 text = """
@@ -69,7 +70,7 @@ class Request():
         self.request = self.str_request.split('\r\n')
         self.method = self.request[0][:3]
         self.ver_protocol = self.request[0][-8:]
-        self.req_resource = self.request[0][4:-8]
+        self.req_resource = self.request[0][4:-9]
         self.valid_req_method()
         self.valid_req_content()
 
@@ -78,33 +79,59 @@ class Request():
             self.valid_method = True
     
     def valid_req_content(self):
-        if os.path.splitext(self.req_resource) in CONTENT_TYPE:
+        path, ext = os.path.splitext(self.req_resource)
+        res = path if ext == '' else ext
+        print(len(res))
+        if res in (CONTENT_TYPE, '/'):
             self.valid_resource = True
 
   
 @dataclass
 class Response():
+    status : str
+    resourse : str
+    ver_protocol : str
+
     def __post_init__(self):
-        self.headers = {'Server' : 'otuserver', 'Date' : '', 'Content-Type' : '' }
-        self.headers['Date'] = datetime.utcnow.strftime("%a, %d %b %Y %I:%m:%S GTM")
-        self.headers['Content-Type'] = CONTENT_TYPE[os.path.splitext[1]]
-
+        self.headers = {'Server' : 'otuserver', 'Date' : '', 'Content-Type' : '', 'Connection' : 'Closed'}
+        
     def headers_resp(self):
-        pass
+        self.headers['Date'] = datetime.utcnow().strftime("%a, %d %b %Y %I:%m:%S GTM")
+        path, ext = os.path.splitext(self.resourse)
+        self.headers['Content-Type'] = CONTENT_TYPE['.txt'] if ext == '' else CONTENT_TYPE[ext]
+        
+    
+    def response_head(self):
+        self.headers_resp()
+        text = '\r\n'.join(f"{key}: {val}" for key, val in self.headers.items())
+        text_status = 'OK' if self.status == 200 else ERRORS[self.status]
+        return f"{self.ver_protocol} {self.status} {text_status}\r\n"+text
 
+    def response_get(self):
+        self.headers_resp()
 
 async def handle_client(client, loop, name):
     with client:
         request = None
         #while True:
         request = (await loop.sock_recv(client, 1024)).decode('utf8')
-        if len(request) == 0:
-            pass#break
+
         data = Request(request)
+        if not data.valid_method:
+            status = METHOD_NOT_ALLOWED
+        elif not data.valid_resource:
+            print('valid_res', data.valid_resource)
+            status = FORBIDDEN
+        elif not os.path.exists(os.path.join(opt.docroot, data.req_resource[1:])):
+            status = NOT_FOUND
+        else:
+            status = OK
+        response = Response(status, data.req_resource, data.ver_protocol)
         print(data.request)
-        print(data.method, data.ver_protocol, data.req_resource, '\n', name)
-        response = text.format('123456')
-        await loop.sock_sendall(client, response.encode('utf8'))
+        print(response.response_head())
+        # print(data.method, data.ver_protocol, data.req_resource, '\n', name)
+        # response = text.format('123456')
+        await loop.sock_sendall(client, response.response_head().encode('utf8'))
     
 
 
